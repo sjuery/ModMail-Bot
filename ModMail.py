@@ -1,6 +1,5 @@
 import os
 import discord
-import datetime
 
 #important Variables Do Not Touch
 client = discord.Client()
