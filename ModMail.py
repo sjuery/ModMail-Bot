@@ -43,15 +43,15 @@ async def on_message(message):
 		#Creates a text channel in the server with the user's name
 		text_channel = await create_text_channel(message.author)
 
-		#If this is the first message in the conversation, at it to the dictionary and send a few messages
+		#If this is the first message in the conversation, add it to the dictionary and send a few messages
 		if currentChannels.get(text_channel.id) == None:
 			currentChannels.update({text_channel.id:message.author.id})
 			await text_channel.send(client.guilds[0].get_role(adminRoleID).mention)
 			await text_channel.send("**" + message.author.name + "#" + message.author.discriminator + " Requires your assistance with the following:**")
-			await text_channel.send(message.content)
+			await text_channel.send(message.author.mention + ": " + message.content)
 			await message.author.send(requestResponse)
 		else:
-			await text_channel.send(message.content)
+			await text_channel.send(message.author.mention + ": " + message.content)
 	#Otherwise, if the message comes from a channel inside the modmail category
 	elif message.channel.category_id == category.id:
 		#If its a close command, add everything to the logs channel, and delete the channel
@@ -89,12 +89,20 @@ async def InitializeSection():
 	for cat in guild.categories:
 		if cat.name == categoryName:
 			for chan in cat.channels:
-				await chan.delete()
-			await cat.delete()
-			break
+				if chan.name == logChannelName.lower():
+					logChannel = chan
+					continue
+				for mess in await chan.history(limit=25).flatten():
+					if(len(mess.mentions) == 1):
+						currentChannels.update({chan.id:mess.mentions[0].id})
+						break
+			category = cat
+			await logChannel.send(client.guilds[0].get_role(adminRoleID).mention + " ModMail is back Online")
+			return
 
 	category = await guild.create_category(categoryName, overwrites=permissions)
 	logChannel = await category.create_text_channel(logChannelName)
+	await logChannel.send(client.guilds[0].get_role(adminRoleID).mention + " This is the very beginning of the logs history")
 
 	#Sets an activity for the bot
 	await client.change_presence(activity=discord.Activity(name="DM to contact Mods", type=3))
@@ -113,7 +121,7 @@ async def log_conversation(conversationOwner, history):
 	history.reverse()
 	for message in history:
 		if message.author == client.user:
-			log += "**" + conversationOwner.name + ":** " + message.content + "\n"
+			log += message.content + "\n"
 		else:
 			log += "**" + message.author.name + ":** " + message.content + "\n"
 	
